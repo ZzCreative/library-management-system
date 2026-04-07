@@ -20,31 +20,32 @@ enum HoldStatus {
 }
 
 model User {
-  id           Int       @id @default(autoincrement())
-  name         String
-  email        String    @unique
-  passwordHash String
-  studentId    String?   @unique
-  role         Role      @default(STUDENT)
-  createdAt    DateTime  @default(now())
-  loans        Loan[]
-  ratings      Rating[]
-  holds        Hold[]
-  wishlists    Wishlist[]
-  auditLogs    AuditLog[]
+  id                    Int                     @id @default(autoincrement())
+  name                  String
+  email                 String                  @unique
+  passwordHash          String
+  studentId             String?                 @unique
+  role                  Role                    @default(STUDENT)
+  createdAt             DateTime                @default(now())
+  loans                 Loan[]
+  ratings               Rating[]
+  holds                 Hold[]
+  wishlists             Wishlist[]
+  auditLogs             AuditLog[]
+  AnnouncementPublisher AnnouncementPublisher[]
 }
 
 model Book {
-  id            Int       @id @default(autoincrement())
+  id            Int        @id @default(autoincrement())
   title         String
   author        String
-  isbn          String    @unique
+  isbn          String     @unique
   genre         String
   description   String?
-  language      String    @default("English")
+  language      String     @default("English")
   shelfLocation String?
-  available     Boolean   @default(true)
-  createdAt     DateTime  @default(now())
+  available     Boolean    @default(true)
+  createdAt     DateTime   @default(now())
   loans         Loan[]
   ratings       Rating[]
   holds         Hold[]
@@ -114,4 +115,32 @@ model AuditLog {
   detail    String?
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id])
+}
+
+// 系统公告表
+model Announcement {
+  id          Int       @id @default(autoincrement())
+  title       String // 标题
+  content     String // 内容
+  isPinned    Boolean   @default(false) // 是否置顶
+  publishDate DateTime  @default(now()) // 发布日期
+  expiryDate  DateTime? // 过期时间（为空则永不过期）
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // 通过链接表与 User 关联（多对多）
+  publishers AnnouncementPublisher[]
+}
+
+// 链接表：记录哪些用户发布了（或关联了）哪些公告
+model AnnouncementPublisher {
+  id             Int      @id @default(autoincrement())
+  announcementId Int
+  userId         Int
+  assignedAt     DateTime @default(now()) // 关联时间
+
+  announcement Announcement @relation(fields: [announcementId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([announcementId, userId]) // 防止重复关联
 }
