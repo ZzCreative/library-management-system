@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  LIBRARIAN
+  ADMIN
+}
+
+enum HoldStatus {
+  WAITING
+  READY
+  CANCELLED
+}
+
+model User {
+  id                    Int                     @id @default(autoincrement())
+  name                  String
+  email                 String                  @unique
+  passwordHash          String
+  studentId             String?                 @unique
+  role                  Role                    @default(STUDENT)
+  createdAt             DateTime                @default(now())
+  loans                 Loan[]
+  ratings               Rating[]
+  holds                 Hold[]
+  wishlists             Wishlist[]
+  auditLogs             AuditLog[]
+  AnnouncementPublisher AnnouncementPublisher[]
+}
+
+model Book {
+  id            Int        @id @default(autoincrement())
+  title         String
+  author        String
+  isbn          String     @unique
+  genre         String
+  description   String?
+  language      String     @default("English")
+  shelfLocation String?
+  available     Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  loans         Loan[]
+  ratings       Rating[]
+  holds         Hold[]
+  wishlists     Wishlist[]
+}
+
+model Loan {
+  id           Int       @id @default(autoincrement())
+  bookId       Int
+  userId       Int
+  checkoutDate DateTime  @default(now())
+  dueDate      DateTime
+  returnDate   DateTime?
+  fineAmount   Float?    @default(0)
+  finePaid     Boolean?  @default(false)
+  fineForgiven Boolean?  @default(false)
+  createdAt    DateTime  @default(now())
+  book         Book      @relation(fields: [bookId], references: [id])
+  user         User      @relation(fields: [userId], references: [id])
+}
+
+model Rating {
+  id        Int      @id @default(autoincrement())
+  bookId    Int
+  userId    Int
+  stars     Int      @default(1)
+  createdAt DateTime @default(now())
+  book      Book     @relation(fields: [bookId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([bookId, userId])
+}
+
+model Hold {
+  id        Int        @id @default(autoincrement())
+  bookId    Int
+  userId    Int
+  status    HoldStatus @default(WAITING)
+  createdAt DateTime   @default(now())
+  book      Book       @relation(fields: [bookId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
+}
+
+model Wishlist {
+  id        Int      @id @default(autoincrement())
+  bookId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+  book      Book     @relation(fields: [bookId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([bookId, userId])
+}
+
+model Config {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String
+  entity    String
+  entityId  Int?
+  detail    String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+// 系统公告表
+model Announcement {
+  id          Int       @id @default(autoincrement())
+  title       String // 标题
+  content     String // 内容
+  isPinned    Boolean   @default(false) // 是否置顶
+  publishDate DateTime  @default(now()) // 发布日期
+  expiryDate  DateTime? // 过期时间（为空则永不过期）
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // 通过链接表与 User 关联（多对多）
+  publishers AnnouncementPublisher[]
+}
+
+// 链接表：记录哪些用户发布了（或关联了）哪些公告
+model AnnouncementPublisher {
+  id             Int      @id @default(autoincrement())
+  announcementId Int
+  userId         Int
+  assignedAt     DateTime @default(now()) // 关联时间
+
+  announcement Announcement @relation(fields: [announcementId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([announcementId, userId]) // 防止重复关联
+}
