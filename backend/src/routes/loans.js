@@ -114,105 +114,48 @@ router.get('/books/search', requireAuth, async (req, res, next) => {
 });
 
 // 3. 馆员借出图书给学生
+// backend/src/routes/loans.js
+
 router.post('/lend', requireAuth, async (req, res, next) => {
+  const { userId, bookId } = req.body;
+
   try {
-    if (req.user.role !== 'LIBRARIAN' && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'Access denied. Librarian or Admin only.' });
-    }
+    // 使用 Prisma 事务：要么全部成功，要么全部失败
+    const result = await prisma.$transaction(async (tx) => {
+      
+      // 1. 检查库存
+      const book = await tx.book.findUnique({ where: { id: parseInt(bookId) } });
+      if (!book) throw new Error('找不到该书籍');
+      if (book.availableCopies <= 0) throw new Error('库存不足，无法借阅');
 
-    const { userId, bookId } = req.body;
-    if (!userId || !bookId) {
-      return res.status(400).json({ message: 'userId and bookId are required' });
-    }
+      // 2. 检查该学生是否已经借过这本书还没还
+      const existing = await tx.loan.findFirst({
+        where: { userId: parseInt(userId), bookId: parseInt(bookId), returnDate: null }
+      });
+      if (existing) throw new Error('该学生已借阅此书且尚未归还');
 
-    // 查询学生
-    const student = await prisma.user.findUnique({
-      where: { id: parseInt(userId) }
-    });
-    if (!student || student.role !== 'STUDENT') {
-      return res.status(404).json({ message: 'Student not found' });
-    }
+      // 3. 创建借书记录
+      const loan = await tx.loan.create({
+        data: {
+          userId: parseInt(userId),
+          bookId: parseInt(bookId),
+          checkoutDate: new Date(),
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30天期
+        }
+      });
 
-    // 查询图书
-    const book = await prisma.book.findUnique({
-      where: { id: parseInt(bookId) }
-    });
-    if (!book) {
-      return res.status(404).json({ message: 'Book not found' });
-    }
-    if (book.availableCopies <= 0) {
-      return res.status(400).json({ message: 'No available copies of this book' });
-    }
+      // 4. 【核心】自动减少库存
+      await tx.book.update({
+        where: { id: parseInt(bookId) },
+        data: { availableCopies: { decrement: 1 } } // 自动减 1
+      });
 
-    // 检查是否重复借阅同一本未还
-    const existingLoan = await prisma.loan.findFirst({
-      where: {
-        userId: student.id,
-        bookId: book.id,
-        returnDate: null
-      }
-    });
-    if (existingLoan) {
-      return res.status(400).json({ message: 'Student already borrowed this book and not returned' });
-    }
-
-    // 检查学生资格：借阅数量限制
-    const currentCount = await getCurrentBorrowCount(student.id);
-    if (currentCount >= MAX_BORROW_LIMIT) {
-      return res.status(400).json({ message: `Student has already borrowed ${MAX_BORROW_LIMIT} books. Cannot lend more.` });
-    }
-    // 检查逾期
-    const hasOverdue = await hasOverdueLoans(student.id);
-    if (hasOverdue) {
-      return res.status(400).json({ message: 'Student has overdue books. Please return them first.' });
-    }
-
-    // 创建借阅记录
-    const checkoutDate = new Date();
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + LOAN_DURATION_DAYS);
-
-    const loan = await prisma.loan.create({
-      data: {
-        userId: student.id,
-        bookId: book.id,
-        checkoutDate,
-        dueDate,
-        fineAmount: 0,
-        finePaid: false,
-        fineForgiven: false
-      }
+      return loan;
     });
 
-    // 减少图书可借副本数
-    await prisma.book.update({
-      where: { id: book.id },
-      data: { availableCopies: { decrement: 1 } }
-    });
-
-    // 审计日志
-    await prisma.auditLog.create({
-      data: {
-        userId: req.user.id,
-        action: 'LEND_BOOK',
-        entity: 'Loan',
-        entityId: loan.id,
-        detail: `Librarian ${req.user.email} lent "${book.title}" to student ${student.email}. Due date: ${dueDate.toISOString()}`
-      }
-    });
-
-    res.status(201).json({
-      message: 'Book lent successfully',
-      loan: {
-        id: loan.id,
-        bookTitle: book.title,
-        studentName: student.name,
-        checkoutDate,
-        dueDate
-      }
-    });
+    res.json({ message: '借书成功', loan: result });
   } catch (error) {
-    next(error);
+    res.status(400).json({ message: error.message });
   }
 });
 
@@ -221,37 +164,41 @@ router.post('/lend', requireAuth, async (req, res, next) => {
 
 
 // 4. 获取当前登录用户的个人借阅历史
+// backend/src/routes/loans.js
+
 router.get('/my-history', requireAuth, async (req, res, next) => {
   try {
-    // 从 requireAuth 中间件获取当前用户的 ID
-    const userId = req.user.id;
+    const userId = req.user.id; // 从中间件获取当前登录用户ID
 
     const history = await prisma.loan.findMany({
       where: {
         userId: userId,
       },
       include: {
+        // 关键点：这里决定了返回的数据里包含哪些书籍信息
         book: {
           select: {
             title: true,
             author: true,
             isbn: true,
             genre: true,
+            totalCopies: true,      // 书籍总馆藏数
+            availableCopies: true,  // 书籍当前可借数
           },
         },
       },
       orderBy: {
-        checkoutDate: 'desc', // 按借出时间降序排列
+        checkoutDate: 'desc',
       },
     });
 
-    // 处理一下数据，增加一个状态字段方便前端显示
+    // 处理状态逻辑（已归还/借阅中/逾期）
     const processedHistory = history.map(loan => {
-      let status = 'ON_LOAN'; // 借阅中
+      let status = 'ON_LOAN';
       if (loan.returnDate) {
-        status = 'RETURNED'; // 已归还
+        status = 'RETURNED';
       } else if (new Date(loan.dueDate) < new Date()) {
-        status = 'OVERDUE'; // 已逾期
+        status = 'OVERDUE';
       }
 
       return {
@@ -265,7 +212,37 @@ router.get('/my-history', requireAuth, async (req, res, next) => {
     next(error);
   }
 });
+// 5.归还书籍接口
+router.post('/return/:loanId', requireAuth, async (req, res, next) => {
+  const { loanId } = req.params;
 
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      
+      // 1. 查找这条借书记录
+      const loan = await tx.loan.findUnique({ where: { id: parseInt(loanId) } });
+      if (!loan) throw new Error('找不到借阅记录');
+      if (loan.returnDate) throw new Error('此书已在之前归还');
 
+      // 2. 更新归还日期
+      const updatedLoan = await tx.loan.update({
+        where: { id: parseInt(loanId) },
+        data: { returnDate: new Date() }
+      });
+
+      // 3. 【核心】自动恢复库存
+      await tx.book.update({
+        where: { id: loan.bookId },
+        data: { availableCopies: { increment: 1 } } // 自动加 1
+      });
+
+      return updatedLoan;
+    });
+
+    res.json({ message: '归还成功，库存已恢复', loan: result });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
 
 module.exports = router;
