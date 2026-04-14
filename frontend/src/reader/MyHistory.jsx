@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-// 引入 shadcn/ui 组件 (确保之前运行过 npx shadcn@latest add table card badge)
+// 引入 shadcn/ui 组件 (已修正路径并删除重复导入)
 import {
   Table,
   TableBody,
@@ -7,9 +7,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+} from "../components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+// 补全漏掉的图标导入
 import { Loader2, BookOpen, AlertCircle } from "lucide-react"; 
 
 const MyHistory = () => {
@@ -21,7 +22,6 @@ const MyHistory = () => {
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      // 获取 Token (假设存放在 localStorage)
       const token = localStorage.getItem('token');
       
       const response = await fetch('http://localhost:3001/api/loans/my-history', {
@@ -100,7 +100,7 @@ const MyHistory = () => {
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="w-[30%]">图书详情</TableHead>
+                <TableHead className="w-[35%]">图书详情</TableHead>
                 <TableHead>借阅日期</TableHead>
                 <TableHead>应还期限</TableHead>
                 <TableHead>归还日期</TableHead>
@@ -112,9 +112,24 @@ const MyHistory = () => {
                 loans.map((loan) => (
                   <TableRow key={loan.id} className="hover:bg-slate-50/50 transition-colors">
                     <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-slate-900">{loan.book.title}</span>
-                        <span className="text-xs text-slate-500">{loan.book.author} | ISBN: {loan.book.isbn}</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-semibold text-slate-900 leading-tight">
+                          {loan.book.title}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {loan.book.author} | ISBN: {loan.book.isbn}
+                        </span>
+                        
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-500 font-medium">
+                            馆藏剩余: {loan.book.availableCopies ?? '加载中'} / {loan.book.totalCopies ?? '-'}
+                          </span>
+                          {loan.book.availableCopies === 0 && (
+                            <span className="text-[10px] text-red-500 font-bold">
+                              已罄
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-slate-600">
