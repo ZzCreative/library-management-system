@@ -141,3 +141,6 @@ vite.config.ts.timestamp-*
 generate-token.js
 
 **/Login.jsx
+frontend/src/App.jsx.backup 
+package-lock.json 
+package.json 

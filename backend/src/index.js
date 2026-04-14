@@ -7,6 +7,8 @@ const cors = require('cors');
 const booksRouter = require('./routes/books');
 const logsRouter = require('./routes/logs');
 const authRouter = require('./routes/auth');
+const readersRouter = require('./routes/readers');
+const loansRouter = require('./routes/loans');
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -19,10 +21,12 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/librarian/auth', authRouter);
+app.use('/readers', readersRouter);
 app.use('/api/books', booksRouter);
 app.use('/api/logs', logsRouter);
 app.use('/books', booksRouter);
 app.use('/logs', logsRouter);
+app.use('/loans', loansRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
