@@ -2,8 +2,8 @@ const express = require('express');
 const cors = require('cors');
 
 const readersRouter = require('./routes/readers');
-const authRouter = require('./routes/auth');    
-const loansRouter = require('./routes/loans');   
+const authRouter = require('./routes/auth');
+const loansRouter = require('./routes/loans');
 const announcementsRouter = require('./routes/announcements');
 
 const app = express();
@@ -17,9 +17,9 @@ app.get('/health', (req, res) => {
 
 app.use('/api/readers', readersRouter);
 app.use('/api/auth', authRouter);
-app.use('/api/librarian/auth', authRouter);      
-app.use('/api/loans', loansRouter);              
-app.use('/api/announcements', announcementsRouter);              
+app.use('/api/librarian/auth', authRouter);
+app.use('/api/loans', loansRouter);
+app.use('/api/announcements', announcementsRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
