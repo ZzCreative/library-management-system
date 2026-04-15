@@ -32,8 +32,11 @@ model User {
   email                  String                  @unique
   passwordHash           String
   studentId              String?                 @unique
+  employeeId             String?                 @unique  // 新增：馆员工号
   role                   Role                    @default(STUDENT)
   createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  
   loans                  Loan[]
   ratings                Rating[]
   holds                  Hold[]
@@ -43,14 +46,16 @@ model User {
 }
 
 model Book {
-  id              Int        @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   title           String
   author          String
-  isbn            String     @unique
+  isbn            String   @unique
   genre           String
   description     String?
-  language        String     @default("English")
-  createdAt       DateTime   @default(now())
+  language        String   @default("English")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
   copies          Copy[]
   ratings         Rating[]
   holds           Hold[]
@@ -58,17 +63,19 @@ model Book {
 }
 
 model Copy {
-  id             Int        @id @default(autoincrement())
-  bookId         Int
-  book           Book       @relation(fields: [bookId], references: [id])
-  barcode        String     @unique
-  floor          Int
-  libraryArea    String
-  shelfNo        String
-  shelfLevel     Int
-  status         CopyStatus @default(AVAILABLE)
-  createdAt      DateTime   @default(now())
-  loans          Loan[]
+  id          Int        @id @default(autoincrement())
+  bookId      Int
+  book        Book       @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  barcode     String     @unique
+  floor       Int?
+  libraryArea String?
+  shelfNo     String?
+  shelfLevel  Int?
+  status      CopyStatus @default(AVAILABLE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  loans       Loan[]
 }
 
 model Loan {
@@ -78,10 +85,12 @@ model Loan {
   checkoutDate DateTime  @default(now())
   dueDate      DateTime
   returnDate   DateTime?
-  fineAmount   Float?    @default(0)
-  finePaid     Boolean?  @default(false)
-  fineForgiven Boolean?  @default(false)
+  fineAmount   Float     @default(0)
+  finePaid     Boolean   @default(false)
+  fineForgiven Boolean   @default(false)
   createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
   copy         Copy      @relation(fields: [copyId], references: [id])
   user         User      @relation(fields: [userId], references: [id])
 }
@@ -92,7 +101,8 @@ model Rating {
   userId    Int
   stars     Int      @default(1)
   createdAt DateTime @default(now())
-  book      Book     @relation(fields: [bookId], references: [id])
+  
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
 
   @@unique([bookId, userId])
@@ -104,7 +114,8 @@ model Hold {
   userId    Int
   status    HoldStatus @default(WAITING)
   createdAt DateTime   @default(now())
-  book      Book       @relation(fields: [bookId], references: [id])
+  
+  book      Book       @relation(fields: [bookId], references: [id], onDelete: Cascade)
   user      User       @relation(fields: [userId], references: [id])
 }
 
@@ -113,16 +124,19 @@ model Wishlist {
   bookId    Int
   userId    Int
   createdAt DateTime @default(now())
-  book      Book     @relation(fields: [bookId], references: [id])
+  
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
 
   @@unique([bookId, userId])
 }
 
 model Config {
-  id    Int    @id @default(autoincrement())
-  key   String @unique
-  value String
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AuditLog {
@@ -133,18 +147,8 @@ model AuditLog {
   entityId  Int?
   detail    String?
   createdAt DateTime @default(now())
+  
   user      User?    @relation(fields: [userId], references: [id])
-}
-
-model Librarian {
-  id         Int      @id @default(autoincrement())
-  employeeId String   @unique @map("employee_id")
-  name       String
-  password   String
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  @@map("librarians")
 }
 
 model Announcement {
@@ -156,6 +160,7 @@ model Announcement {
   expiryDate  DateTime?
   createdAt   DateTime                @default(now())
   updatedAt   DateTime                @updatedAt
+  
   publishers  AnnouncementPublisher[]
 }
 
@@ -163,6 +168,7 @@ model AnnouncementPublisher {
   id             Int          @id @default(autoincrement())
   userId         Int
   announcementId Int
+  
   user           User         @relation(fields: [userId], references: [id])
   announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
 
