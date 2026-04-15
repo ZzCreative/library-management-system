@@ -1,6 +1,10 @@
 import { useState } from 'react'
 
-export default function LibrarianDashboard({ librarian, onLogout }) {
+export default function LibrarianDashboard({
+  librarian,
+  onLogout,
+  onOpenBookManager,
+}) {
   const [showConfirm, setShowConfirm] = useState(false)
 
   const handleLogout = () => {
@@ -62,7 +66,10 @@ export default function LibrarianDashboard({ librarian, onLogout }) {
             <div className="text-4xl mb-4">📖</div>
             <h2 className="text-xl font-bold mb-2">图书管理</h2>
             <p className="text-gray-500 text-sm mb-4">添加、编辑、删除图书信息</p>
-            <button className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+            <button
+              onClick={onOpenBookManager}
+              className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
+            >
               进入 →
             </button>
           </div>
@@ -71,8 +78,8 @@ export default function LibrarianDashboard({ librarian, onLogout }) {
             <div className="text-4xl mb-4">📋</div>
             <h2 className="text-xl font-bold mb-2">借阅管理</h2>
             <p className="text-gray-500 text-sm mb-4">管理借阅记录、处理还书</p>
-            <button className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
-              进入 →
+            <button className="w-full bg-gray-200 text-gray-500 px-4 py-2 rounded-lg cursor-not-allowed">
+              开发中
             </button>
           </div>
 
@@ -80,8 +87,8 @@ export default function LibrarianDashboard({ librarian, onLogout }) {
             <div className="text-4xl mb-4">👥</div>
             <h2 className="text-xl font-bold mb-2">读者管理</h2>
             <p className="text-gray-500 text-sm mb-4">查看读者信息、借阅历史</p>
-            <button className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
-              进入 →
+            <button className="w-full bg-gray-200 text-gray-500 px-4 py-2 rounded-lg cursor-not-allowed">
+              开发中
             </button>
           </div>
         </div>
