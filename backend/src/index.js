@@ -12,6 +12,7 @@ const authRouter = require('./routes/auth');   // 鉴权路由
 const readersRouter = require('./routes/readers');
 const readerBorrowRouter = require('./routes/reader-borrow');
 const announcementsRouter = require('./routes/announcements');
+const adminLoansRouter = require('./routes/admin-loans');
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -32,6 +33,7 @@ app.use('/api/books', booksRouter);
 app.use('/api/logs', logsRouter);
 app.use('/api/loans', loansRouter);         // 你的借阅历史入口
 app.use('/api/announcements', announcementsRouter);
+app.use('/api/admin/loans', adminLoansRouter);
 app.use('/readers', readersRouter);
 app.use('/loans', loansRouter);
 app.use('/api/reader', readerBorrowRouter);

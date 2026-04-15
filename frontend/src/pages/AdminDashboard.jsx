@@ -14,6 +14,11 @@ function AdminDashboard() {
           <p style={{ margin: '10px 0 0', opacity: 0.9 }}>查看系统操作日志</p>
         </a>
 
+        <a href="/admin-returns" style={{ display: 'block', padding: '30px', background: '#10b981', color: 'white', borderRadius: '8px', textDecoration: 'none', textAlign: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: '20px' }}>接收还书</h3>
+          <p style={{ margin: '10px 0 0', opacity: 0.9 }}>处理图书归还并恢复可借状态</p>
+        </a>
+
         <a href="/announcements" style={{ display: 'block', padding: '30px', background: '#10b981', color: 'white', borderRadius: '8px', textDecoration: 'none', textAlign: 'center' }}>
           <h3 style={{ margin: 0, fontSize: '20px' }}>公告查看</h3>
           <p style={{ margin: '10px 0 0', opacity: 0.9 }}>查看所有公告</p>
